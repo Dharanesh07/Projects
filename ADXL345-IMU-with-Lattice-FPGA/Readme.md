@@ -3,7 +3,7 @@
 A hardware implementation of gesture recognition using the ADXL345 3-axis accelerometer interfaced with a Lattice FPGA. This project demonstrates real-time sensor data acquisition, processing, and gesture classification entirely in hardware logic.
 
 <img width="500" height="500" alt="smart_sensor" src="https://github.com/user-attachments/assets/f9e62a3e-1c5e-421c-ba5d-56111ac3330d" />
-<img src="images/demo.gif" alt="ADXL345 Demo" width="400" height="600"/>
+<img align="right" src="images/demo.gif" alt="ADXL345 Demo" width="400" height="600"/>
 
 
 ## Overview
