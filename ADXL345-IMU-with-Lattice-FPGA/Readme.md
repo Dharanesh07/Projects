@@ -52,15 +52,6 @@ This project implements a complete pipeline for reading accelerometer data from 
 - **Gesture Classifier**: Direction detection logic
 - **UART Transmitter**: Serial output for debugging and monitoring
 
-### Configuration
-
-- **Resolution**: Full resolution mode
-- **Range**: ±4g
-- **Data Format**: 16-bit signed integers
-- **Filter Window**: 4 samples
-- **Communication**: SPI (sensor), UART (output)
-
-
 ## Skills Demonstrated
 
 - Hardware description language (Verilog/VHDL)
@@ -70,14 +61,6 @@ This project implements a complete pipeline for reading accelerometer data from 
 - FIFO buffer design and management
 - Hardware-software integration
 - Debugging techniques for embedded systems
-
-## Future Enhancements
-
-- Implement advanced gesture recognition algorithms
-- Add calibration routine for sensor offset correction
-- Extend to multi-gesture classification
-- Optimize filter parameters for different use cases
-- Add I2C interface support as alternative to SPI
 
 ## Getting Started
 
