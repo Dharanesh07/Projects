@@ -1,0 +1,18 @@
+# Rule enable/disable configuration
+# No prefix or a '+' prefix enables it, '-' disable it. Configuration values for each rules placed after '=' character
+-explicit-parameter-storage-type
++generate-label
++macro-name-style
++module-begin-block
++mismatched-labels
++module-filename
++packed-dimensions-range-ordering
++signal-name-style
+-proper-parameter-declaration
+-no-trailing-spaces
+
++parameter-name-style=localparam_style:ALL_CAPS
+-always-comb
+-unpacked-dimensions-range-ordering
+
++signal-name-style=lower_snake_case,CamelCase,ALL_CAPS

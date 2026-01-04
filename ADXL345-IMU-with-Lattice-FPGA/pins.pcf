@@ -1,0 +1,22 @@
+set_io --warn-no-port clk J3
+
+set_io --warn-no-port led[0] B5
+set_io --warn-no-port led[1] B4
+set_io --warn-no-port led[2] A2
+set_io --warn-no-port led[3] A1
+set_io --warn-no-port led[4] C5
+set_io --warn-no-port led[5] C4
+set_io --warn-no-port led[6] B3
+set_io --warn-no-port led[7] C3
+
+# FTDI / UART pins
+
+set_io --warn-no-port uart_tx B12
+set_io --warn-no-port uart_rx B10
+
+# SPI Interface to ADXL345
+set_io spi_cs  B16    
+set_io spi_clk  D16   
+set_io spi_mosi D14   
+set_io spi_miso C16   
+
