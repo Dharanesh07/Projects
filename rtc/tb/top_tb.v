@@ -8,12 +8,13 @@ module top_tb ();
   reg  r_clk;
   wire scl;
   wire sda;
-  reg [3:0] count;
-  reg ack;
+  reg [3:0] bit_cnt;
+  reg ack_drive;
 
   initial begin
     r_clk = 0;
-    count = 0;
+    bit_cnt = 0;
+    ack_drive=0;
     forever #(CLK_PERIOD / 2) r_clk = ~r_clk;
   end
 
@@ -29,18 +30,27 @@ module top_tb ();
     $dumpvars(0, top_tb);
   end
 
-  
-  always @(posedge scl) begin
-    count <= count + 1;
-    if(count == 8) begin
-      ack <= 1'b1;
-    end else ack <= 1'b0;
+
+always @(negedge scl) begin
+  bit_cnt <= bit_cnt + 1;
+
+  // Prepare ACK before 9th rising edge
+  if (bit_cnt == 7)
+    ack_drive <= 1'b1;   // drive SDA low
+  else if (bit_cnt == 8) begin
+    ack_drive <= 1'b0;   // release SDA
+    bit_cnt <= 0;        // ready for next byte
   end
-  assign sda = ack ? 1'b1 : 1'bz;
+end
+
+assign sda = ack_drive ? 1'b0 : 1'bz;
+
+  
   initial begin
     #(DURATION);  // Duration for simulation
     $finish;
   end
 endmodule
+
 
 
