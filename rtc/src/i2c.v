@@ -21,7 +21,6 @@ module i2c #(
     input            i_rstn,
     input            i_i2c_start,
     input            i_i2c_stop,
-    output reg [3:0] state,
     input      [7:0] i_i2c_wr_byte,
     output           o_i2c_tx_done,
     output           o_i2c_ack,
@@ -50,7 +49,7 @@ module i2c #(
 
   localparam STATE_WIDTH = $clog2(LAST_STATE);
 
-  //reg  [  STATE_WIDTH-1:0] state;
+  reg  [  STATE_WIDTH-1:0] state;
   reg  [  STATE_WIDTH-1:0] state_nxt;
 
   // 7 bit address + 1 Read or write bit + 1 ACK bit
