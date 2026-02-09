@@ -1,9 +1,10 @@
 `timescale 1ns / 1ps
 
 module top (
-    input  sys_clk,
-    output i2c_sda,
-    inout  i2c_scl
+    input            sys_clk,
+    inout            i2c_scl,
+    inout            i2c_sda,
+    output reg [7:0] debug_led
 );
 
 
@@ -35,6 +36,9 @@ module top (
   localparam WRITE_DATA = 2;
   localparam READ_ADDR = 3;
   localparam READ_DATA = 4;
+  localparam WAIT_STATE1 = 5;
+  localparam WAIT_STATE2 = 6;
+
 
   reg  [2:0] rstate;
   reg  [2:0] rstate_nxt;
@@ -50,6 +54,7 @@ module top (
   wire       i2c_tx_done;
 
 
+  wire [7:0] i2cstate;
 
   i2c #(
       .I2C_FREQ   (I2C_FREQ),
@@ -59,6 +64,7 @@ module top (
       .i_rstn       (rstn),
       .i_i2c_start  (i2c_tx_start),
       .i_i2c_stop   (i2c_tx_stop),
+      .state        (i2cstate),
       .i_i2c_wr_byte(i2c_wrbyte),
       .o_i2c_tx_done(i2c_tx_done),
       .o_i2c_ack    (i2c_ack),
@@ -68,7 +74,7 @@ module top (
       .i2c_sda      (i2c_sda)
   );
 
-
+  //assign debug_led = ~(i2cstate);
 
   always @(posedge sys_clk) begin
     if (!rstn) begin
@@ -81,6 +87,7 @@ module top (
       i2c_tx_start <= i2c_tx_start_nxt;
       i2c_tx_stop  <= i2c_tx_stop_nxt;
       i2c_wrbyte   <= i2c_wrbyte_nxt;
+      debug_led    <= ~(i2c_rdbyte);
     end
   end
 
@@ -89,45 +96,51 @@ module top (
     rstate_nxt       = rstate;
     i2c_wrbyte_nxt   = i2c_wrbyte;
     i2c_tx_start_nxt = i2c_tx_start;
-    i2c_tx_stop_nxt  = i2c_tx_stop;
-
+    //i2c_tx_stop_nxt  = i2c_tx_stop;
+    i2c_tx_start_nxt = 1'b0;
     case (rstate)
       START: begin  //0
-        i2c_wrbyte_nxt = DS3231M_WR_ADDR;
-        i2c_tx_start_nxt = 1'b1;
-        rstate_nxt = DEV_ADDR;
-      end
-
-      DEV_ADDR: begin  // 1
-        i2c_tx_start_nxt = 1'b0;
-        if (i2c_ack) begin
-          i2c_wrbyte_nxt = DS3231M_SEC_REG;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt = WRITE_DATA;
+        if (rst_done) begin
+          i2c_wrbyte_nxt = DS3231M_WR_ADDR;
+          rstate_nxt = DEV_ADDR;
         end
+      end
+      DEV_ADDR: begin  // 1
+        i2c_tx_start_nxt = 1'b1;
+        if (!i2c_ack) begin
+          i2c_wrbyte_nxt = 8'h00;
+          rstate_nxt = WAIT_STATE1;
+        end
+      end
+      WAIT_STATE1: begin
+        rstate_nxt = WRITE_DATA;
       end
 
       WRITE_DATA: begin  // 2
-        i2c_tx_start_nxt = 1'b0;
-        if (i2c_ack) begin
+        i2c_tx_start_nxt = 1'b1;
+        //i2c_tx_stop_nxt = 1'b1;
+        if (!i2c_ack) begin
           i2c_wrbyte_nxt   = DS3231M_RD_ADDR;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt       = READ_ADDR;
+          i2c_tx_start_nxt = 1'b0;
+          rstate_nxt       = WAIT_STATE2;
         end
       end
 
+      WAIT_STATE2: begin
+        rstate_nxt = READ_ADDR;
+      end
+
       READ_ADDR: begin  // 3
-        i2c_tx_start_nxt = 1'b0;
-        if (i2c_dataval) begin
-          i2c_wrbyte_nxt   = 8'h00;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt       = READ_DATA;
+        i2c_tx_start_nxt = 1'b1;
+        if (!i2c_ack) begin
+          i2c_wrbyte_nxt = DS3231M_RD_ADDR;
+          rstate_nxt     = READ_DATA;
         end
       end
 
       READ_DATA: begin  // 4
-        i2c_tx_start_nxt = 1'b0;
-        if (i2c_dataval) begin
+        i2c_tx_start_nxt = 1'b1;
+        if (!i2c_ack) begin
           i2c_tx_stop_nxt = 1'b1;
           rstate_nxt      = READ_DATA;
         end
