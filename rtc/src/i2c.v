@@ -1,5 +1,13 @@
-// i_i2c_start input active high initiates the i2c transaction
-// Keeping it high will initiate repeated start
+// i_i2c_sta make i_i2c_start active high to initiate the transaction. Hold it 
+// high to initiate repeated start. This provides repeated start.`rt input active high initiates the i2c transaction
+// Toggle for one clock to initiate i2c transaction
+// To make i2c controller to repeat transaction without repeated start, 
+// make the i_i2c_start low after initiaiting transaction. This would transfer data over i2c line 
+// without initiating repeated start
+
+// To make repeated start make i_i2c_start active high to initiate the transaction. Hold it 
+// high to initiate repeated start. This provides repeated start. 
+
 
 //i_i2c_wr_byte - 8 bit data which should be held stable for a clock before writing
 
@@ -72,6 +80,7 @@ module i2c #(
   reg                      i2c_ack;
   reg                      i2c_ack_nxt;
 
+reg is_repeat_start_write;
   reg  [COUNTER_WIDTH-1:0] clk_counter;
   reg  [COUNTER_WIDTH-1:0] clk_counter_nxt;
 
@@ -82,10 +91,11 @@ module i2c #(
     if (state == IDLE || state == START_MODE) begin
       scl_en_nxt = 1'b1;
     end else if (clk_counter == CLK_DIV_FULL) begin
-      clk_counter_nxt = 0;
-      scl_en_nxt      = (scl_en == 0) ? 1'b1 : 1'b0;
+        clk_counter_nxt = 0;
+        scl_en_nxt      = (scl_en == 0) ? 1'b1 : 1'b0;
     end
   end
+
 
   always @(posedge i_clk) begin
     if (!i_rstn) begin
@@ -127,6 +137,7 @@ module i2c #(
     tx_done_nxt       = 1'b0;
     o_i2c_dataval_nxt = o_i2c_dataval;
     o_i2c_rd_byte_nxt = o_i2c_rd_byte;
+    is_repeat_start_write = 1'b0;
 
     case (state)
       IDLE: begin  //0
@@ -154,13 +165,13 @@ module i2c #(
           if (bit_index == 0) begin
             bit_index_nxt = 0;
             state_nxt     = READ_ACK;
+            tx_done_nxt = 1'b1;
           end
         end
       end
 
       READ_ACK: begin  //3 
         if (scl_hi_clk_mid) begin
-          tx_done_nxt = 1'b1;
           i2c_ack_nxt = i2c_sda;
           start_nxt   = i_i2c_start;
           wr_byte_nxt = {i_i2c_wr_byte, 1'b1};
@@ -177,8 +188,12 @@ module i2c #(
       end
       REPEAT_START: begin  //4
         bit_index_nxt = 8;
-        if (start) state_nxt = START_MODE;
-        else state_nxt = SEND_DATA;
+        //start_nxt   = i_i2c_start;
+        //wr_byte_nxt = {i_i2c_wr_byte, 1'b1};
+        if (start) begin
+          state_nxt = START_MODE;
+          is_repeat_start_write = 1'b1;
+        end else state_nxt = SEND_DATA;
       end
       READ_DATA: begin  //5
         o_i2c_dataval_nxt = 1'b0;
@@ -232,6 +247,8 @@ module i2c #(
   assign scl_lo_clk_mid = (scl_en == 1'b0) && (clk_counter == CLK_DIV_HALF);
 
   assign o_i2c_tx_done = tx_done;
+
+  //assign o_i2c_tx_done = (state == READ_ACK) && (scl_hi_clk_mid == 1'b1);
   assign o_i2c_ack = i2c_ack;
 
 
