@@ -34,11 +34,10 @@ module top (
   localparam START = 0;
   localparam DEV_ADDR = 1;
   localparam WRITE_DATA = 2;
-  localparam READ_ADDR = 3;
-  localparam READ_DATA = 4;
-  localparam WAIT_STATE1 = 5;
-  localparam WAIT_STATE2 = 6;
-
+  localparam REPEAT_START= 3 ;
+  localparam READ_ADDR = 4;
+  localparam READ_DATA = 5;
+  localparam IDLE = 6;
 
   reg  [2:0] rstate;
   reg  [2:0] rstate_nxt;
@@ -64,7 +63,6 @@ module top (
       .i_rstn       (rstn),
       .i_i2c_start  (i2c_tx_start),
       .i_i2c_stop   (i2c_tx_stop),
-      .state        (i2cstate),
       .i_i2c_wr_byte(i2c_wrbyte),
       .o_i2c_tx_done(i2c_tx_done),
       .o_i2c_ack    (i2c_ack),
@@ -96,54 +94,58 @@ module top (
     rstate_nxt       = rstate;
     i2c_wrbyte_nxt   = i2c_wrbyte;
     i2c_tx_start_nxt = i2c_tx_start;
-    //i2c_tx_stop_nxt  = i2c_tx_stop;
+    i2c_tx_stop_nxt  = 1'b0;
     i2c_tx_start_nxt = 1'b0;
     case (rstate)
       START: begin  //0
         if (rst_done) begin
           i2c_wrbyte_nxt = DS3231M_WR_ADDR;
+          i2c_tx_start_nxt = 1'b1;
           rstate_nxt = DEV_ADDR;
         end
       end
       DEV_ADDR: begin  // 1
-        i2c_tx_start_nxt = 1'b1;
-        if (!i2c_ack) begin
+        if (i2c_tx_done) begin
           i2c_wrbyte_nxt = 8'h00;
-          rstate_nxt = WAIT_STATE1;
+          i2c_tx_start_nxt = 1'b1;
+          rstate_nxt = WRITE_DATA;
         end
-      end
-      WAIT_STATE1: begin
-        rstate_nxt = WRITE_DATA;
       end
 
       WRITE_DATA: begin  // 2
-        i2c_tx_start_nxt = 1'b1;
-        //i2c_tx_stop_nxt = 1'b1;
-        if (!i2c_ack) begin
-          i2c_wrbyte_nxt   = DS3231M_RD_ADDR;
-          i2c_tx_start_nxt = 1'b0;
-          rstate_nxt       = WAIT_STATE2;
+        if (i2c_tx_done) begin
+          i2c_wrbyte_nxt   = 8'h30;
+          i2c_tx_start_nxt = 1'b1;
+          rstate_nxt       = REPEAT_START;
         end
       end
 
-      WAIT_STATE2: begin
-        rstate_nxt = READ_ADDR;
+      REPEAT_START: begin // 3
+        if (i2c_tx_done) begin
+          i2c_wrbyte_nxt = DS3231M_RD_ADDR;
+          i2c_tx_start_nxt = 1'b1;
+          rstate_nxt     = READ_ADDR;
+        end
       end
 
-      READ_ADDR: begin  // 3
+      READ_ADDR: begin  // 4
         i2c_tx_start_nxt = 1'b1;
-        if (!i2c_ack) begin
-          i2c_wrbyte_nxt = DS3231M_RD_ADDR;
+        if (i2c_tx_done) begin
+          i2c_wrbyte_nxt = 8'h00;
+          i2c_tx_start_nxt = 1'b1;
           rstate_nxt     = READ_DATA;
         end
       end
 
-      READ_DATA: begin  // 4
-        i2c_tx_start_nxt = 1'b1;
-        if (!i2c_ack) begin
+      READ_DATA: begin  // 5
+        if (i2c_dataval) begin
           i2c_tx_stop_nxt = 1'b1;
-          rstate_nxt      = READ_DATA;
+          rstate_nxt      = IDLE;
         end
+      end
+
+      IDLE: begin // 6
+          i2c_tx_stop_nxt = 1'b1;
       end
 
       default: begin
